@@ -2,6 +2,7 @@ venv/
 .vscode
 .git
 .terraform
+.pytest_cache
 *.tfstate
 *.backup
 *__pycache__/

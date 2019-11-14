@@ -6,7 +6,7 @@ provider "aws" {
 }
 data "archive_file" "lambda_zip" {
   type        = "zip"
-  source_dir  = "../"
+  source_dir  = "../lambda"
   output_path = "../lambda_tgw_routetable.zip"
 }
 
@@ -60,14 +60,14 @@ resource "aws_iam_role_policy_attachment" "lambda_tgw_routetable" {
 
 resource "aws_lambda_function" "lambda_tgw_routetable" {
   filename          = "../lambda_tgw_routetable.zip"
-  function_name     = "lambda_tgw_routetable"
+  function_name     = "Dev-TGWAutom-ListRouteTable"
   role              = "${aws_iam_role.role_for_lambda.arn}"
   handler           = "main.lambda_handler"
   source_code_hash  = "$data.archive_file.lambda_log_parser-zip.output_base64sha256"
   runtime           = "python3.7"
   memory_size       = "1024"
   timeout           = "60"
-  publish           = "true"
+  publish           = "false"
 
   }
 
@@ -77,21 +77,21 @@ resource "aws_cloudwatch_event_rule" "watch_creds" {
   schedule_expression = "cron(0 0 1 * ? *)"
 }
 
-resource "aws_cloudwatch_event_target" "lambda_target" {
-  rule      = "${aws_cloudwatch_event_rule.watch_creds.name}"
-  arn       = "${aws_lambda_alias.alias_dev.arn}"
-}
+# resource "aws_cloudwatch_event_target" "lambda_target" {
+#   rule      = "${aws_cloudwatch_event_rule.watch_creds.name}"
+#   arn       = "${aws_lambda_alias.alias_dev.arn}"
+# }
 
-resource "aws_ses_email_identity" "example" {
-  email = "pierre.poree@d2si.io"
-}
+# resource "aws_ses_email_identity" "example" {
+#   email = "pierre.poree@d2si.io"
+# }
 
 
-resource "aws_lambda_alias" "alias_prod" {
-  name             = "Prod"
-  description      = "Alias for the Prod"
-  function_name    = "${aws_lambda_function.lambda_tgw_routetable.arn}"
-  function_version = "$LATEST"
+# resource "aws_lambda_alias" "alias_prod" {
+#   name             = "Prod"
+#   description      = "Alias for the Prod"
+#   function_name    = "${aws_lambda_function.lambda_tgw_routetable.arn}"
+#   function_version = "$LATEST"
 
   # A map that defines the proportion of events 
   # that should be sent to different versions of a lambda function.
@@ -101,11 +101,11 @@ resource "aws_lambda_alias" "alias_prod" {
   #    }
   # }
 
-}
+# }
 
-resource "aws_lambda_alias" "alias_dev" {
-  name             = "Dev"
-  description      = "Alias for the Dev"
-  function_name    = "${aws_lambda_function.lambda_tgw_routetable.arn}"
-  function_version = "$LATEST"
-}              
+# resource "aws_lambda_alias" "alias_dev" {
+#   name             = "Dev"
+#   description      = "Alias for the Dev"
+#   function_name    = "${aws_lambda_function.lambda_tgw_routetable.arn}"
+#   function_version = "$LATEST"
+# }              
