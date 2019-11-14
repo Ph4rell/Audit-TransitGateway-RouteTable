@@ -42,6 +42,14 @@ resource "aws_iam_policy" "lambda_tgw_routetable" {
             "Sid": "ManageOwnAccessKeys",
             "Effect": "Allow",
             "Action": [
+                "ec2:DescribeTransitGatewayRouteTables",
+                "ec2:ExportTransitGatewayRoutes",
+                "ec2:ExportTransitGatewayRoutes",
+                "s3:PutObject",
+                "s3:ListBucket",
+                "s3:CreateBucket",
+                "s3:DeleteObject",
+                "s3:DeleteBucket",
                 "logs:CreateLogGroup",
                 "logs:CreateLogStream",
                 "logs:PutLogEvents"
@@ -62,7 +70,7 @@ resource "aws_lambda_function" "lambda_tgw_routetable" {
   filename          = "../lambda_tgw_routetable.zip"
   function_name     = "Dev-TGWAutom-ListRouteTable"
   role              = "${aws_iam_role.role_for_lambda.arn}"
-  handler           = "main.lambda_handler"
+  handler           = "lambda_tgw.lambda_handler"
   source_code_hash  = "$data.archive_file.lambda_log_parser-zip.output_base64sha256"
   runtime           = "python3.7"
   memory_size       = "1024"
@@ -71,9 +79,9 @@ resource "aws_lambda_function" "lambda_tgw_routetable" {
 
   }
 
-resource "aws_cloudwatch_event_rule" "watch_creds" {
-  name                = "CloudWatch-Creds"
-  description         = "EveryDay Cron to check expired IAM creds"
+resource "aws_cloudwatch_event_rule" "check_tgw_routetable" {
+  name                = "CloudWatch-tgw_routetable"
+  description         = "Every Month Cron to check TGW Route Table"
   schedule_expression = "cron(0 0 1 * ? *)"
 }
 
