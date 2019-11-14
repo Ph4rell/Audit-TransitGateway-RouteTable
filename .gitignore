@@ -1,0 +1,8 @@
+venv/
+.vscode
+.git
+.terraform
+*.tfstate
+*.backup
+*__pycache__/
+*.zip
