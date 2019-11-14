@@ -2,56 +2,107 @@
 # and download all the file and extract the TGW attachment - VPC Id
 # Outputs : TGW Attchments and VPC ID
 # TODO 
-# function to export - function to download - function to extract
+# function to download - function to extract
 # add destination CIDR ?
 
 import json
 import boto3
-from botocore.exceptions import ClientError
+import botocore
+import logging
+from random import randint
 import os
 
-def main(event, context):
-    export_data_to_s3("totototototototo")
+def lambda_handler(event, context):
+
+    temp_bucket = "d2si-temp-bucket-s3"
 
 
-def export_data_to_s3(bucket):
+    if bucket_exists(temp_bucket):
+        print(f"Bucket {temp_bucket} exist !")
+        delete_bucket(temp_bucket)
+        lambda_handler(event, context)
+        
+    
+    else:
+        print(f"Bucket {temp_bucket} don't exist !")
+        create_temp_bucket_s3(temp_bucket)
+
+        for i in list_tgw_routetable():
+            export_data_to_s3(i, temp_bucket)
+        
+def delete_bucket(bucket_name):
     """
-    Func to export all the tgw route table to S3
+    Func to delete files from bucket and bucket himself
     """
-    client = boto3.client("ec2")
+    s3 = boto3.resource("s3")
+    bucket = s3.Bucket(bucket_name)
+    for key in bucket.objects.all():
+        key.delete()
+    bucket.delete()
+
+
+def bucket_exists(bucket_name):
+    """
+    Func to test if the bucket exist or not
+    """
+
+    s3 = boto3.client('s3')
     try:
-        tables = client.describe_transit_gateway_route_tables()
-        for table in tables["TransitGatewayRouteTables"]:
+        response = s3.head_bucket(Bucket=bucket_name)
+    except botocore.exceptions.ClientError as e:
+        logging.debug(e)
+        return False
+    return True
+        
+def create_temp_bucket_s3(bucket_name):
+    """
+    Func to create temporary s3 bucket to store data
+    """
+    s3 = boto3.resource("s3")
 
-            tgw_table_name = (table["Tags"][2].get("Value"))
-            tgw_table = (table["TransitGatewayRouteTableId"])
-
-            client.export_transit_gateway_routes(
-                TransitGatewayRouteTableId=tgw_table, \
-                S3Bucket=bucket
-            )  
-    except ClientError as error:
-        print(error)      
+    bucket = s3.create_bucket(
+        Bucket = bucket_name,
+        ACL = "private",
+        CreateBucketConfiguration = {
+            "LocationConstraint": "eu-west-1"
+        }
+    )  
     return bucket
 
 
-#     client = boto3.client('ec2')
-#     s3 = boto3.resource('s3')
+def list_tgw_routetable():
+    """
+    Func to list all the tgw route table ID
+    Return tgw route table id
+    """
+    client = boto3.client("ec2")
+    tgw_table = list()
+    try:
+        tables = client.describe_transit_gateway_route_tables()
+        for table in tables["TransitGatewayRouteTables"]:
+            #tgw_table_name = (table["Tags"][2].get("Value"))
+            tgw_table.append(table["TransitGatewayRouteTableId"])
 
-# bucket = "engieexportroutetabletransitgw"
+    except botocore.exceptionsClientError as error:
+        print(error)
 
-# try:
-#     tables = client.describe_transit_gateway_route_tables()
+    return tgw_table
 
-#     for table in tables["TransitGatewayRouteTables"]:
 
-#         tgw_table_name = (table["Tags"][2].get("Value"))
-#         tgw_table = (table["TransitGatewayRouteTableId"])
-#         #client.export_transit_gateway_routes(TransitGatewayRouteTableId=tgw_table, S3Bucket=bucket)
+def export_data_to_s3(tgw_routetable_id, bucket):
+    """
+    Func to export the tgw route table to S3
+    """
+    client = boto3.client("ec2")
+    try:
+        client.export_transit_gateway_routes(
+            TransitGatewayRouteTableId=tgw_routetable_id, \
+            S3Bucket=bucket
+        )
+    
+    except ClientError as error:
+        print(error)
 
-# except ClientError as error:
-#     print("bucket")
-#     raise IOError(f"Error with {error.message}")
 
 
 # try:
@@ -88,4 +139,6 @@ def export_data_to_s3(bucket):
 
 
 if __name__ == "__main__":
-    main()
+    event = 1
+    context = 1
+    lambda_handler(event, context)
