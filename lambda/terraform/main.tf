@@ -1,6 +1,12 @@
-data "archive_file" "lambda_log_parser-zip" {
+# Configure the AWS Provider
+provider "aws" {
+  version = "~> 2.0"
+  region  = "eu-west-1"
+  profile = "d2si"
+}
+data "archive_file" "lambda_zip" {
   type        = "zip"
-  source_dir  = "../lambda_tgw_routetable/"
+  source_dir  = "../"
   output_path = "../lambda_tgw_routetable.zip"
 }
 
@@ -36,14 +42,6 @@ resource "aws_iam_policy" "lambda_tgw_routetable" {
             "Sid": "ManageOwnAccessKeys",
             "Effect": "Allow",
             "Action": [
-                "iam:CreateAccessKey",
-                "iam:DeleteAccessKey",
-                "iam:GetAccessKeyLastUsed",
-                "iam:GetUser",
-                "iam:ListAccessKeys",
-                "iam:UpdateAccessKey",
-                "iam:ListUsers",
-                "ses:SendEmail",
                 "logs:CreateLogGroup",
                 "logs:CreateLogStream",
                 "logs:PutLogEvents"
@@ -69,7 +67,7 @@ resource "aws_lambda_function" "lambda_tgw_routetable" {
   runtime           = "python3.7"
   memory_size       = "1024"
   timeout           = "60"
-  publish           = "false"
+  publish           = "true"
 
   }
 
@@ -92,22 +90,22 @@ resource "aws_ses_email_identity" "example" {
 resource "aws_lambda_alias" "alias_prod" {
   name             = "Prod"
   description      = "Alias for the Prod"
-  function_name    = "${aws_lambda_function.lambda_rotate_creds.arn}"
-  function_version = "1"
+  function_name    = "${aws_lambda_function.lambda_tgw_routetable.arn}"
+  function_version = "$LATEST"
 
   # A map that defines the proportion of events 
   # that should be sent to different versions of a lambda function.
-  routing_config {
-    additional_version_weights = {
-      "2" = 0.1 # 10% of requests sent to lambda version 2
-     }
-  }
+  # routing_config {
+  #   additional_version_weights = {
+  #     "2" = 0.1 # 10% of requests sent to lambda version 2
+  #    }
+  # }
 
 }
 
 resource "aws_lambda_alias" "alias_dev" {
   name             = "Dev"
   description      = "Alias for the Dev"
-  function_name    = "${aws_lambda_function.lambda_rotate_creds.arn}"
+  function_name    = "${aws_lambda_function.lambda_tgw_routetable.arn}"
   function_version = "$LATEST"
 }              
