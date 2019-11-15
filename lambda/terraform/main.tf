@@ -48,6 +48,7 @@ resource "aws_iam_policy" "lambda_tgw_routetable" {
                 "s3:PutObject",
                 "s3:ListBucket",
                 "s3:CreateBucket",
+                "s3:GetObject",
                 "s3:DeleteObject",
                 "s3:DeleteBucket",
                 "logs:CreateLogGroup",

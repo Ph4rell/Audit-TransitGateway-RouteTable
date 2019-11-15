@@ -19,36 +19,60 @@ def lambda_handler(event, context):
 
     if bucket_exists(temp_bucket):
         print(f"Bucket {temp_bucket} exist !")
-        delete_bucket(temp_bucket)
-        lambda_handler(event, context)
+        # Delete the old files in the bucket
+        delete_files(temp_bucket)
+
+        for rt in list_tgw_routetable():
+            export_data_to_s3(rt, temp_bucket)
+        download_files_from_s3(temp_bucket)
         
     
     else:
         print(f"Bucket {temp_bucket} don't exist !")
+        # Create the bucket
         create_temp_bucket_s3(temp_bucket)
 
-        for i in list_tgw_routetable():
-            export_data_to_s3(i, temp_bucket)
-        
-def delete_bucket(bucket_name):
+        for rt in list_tgw_routetable():
+            export_data_to_s3(rt, temp_bucket)
+        download_files_from_s3(temp_bucket)
+
+def download_files_from_s3(bucket_name):
+    """
+    Func to download content of the bucket to /tmp/
+    """
+    #local_folder = '/tmp/'
+    s3 = boto3.resource("s3")
+
+    bucket = s3.Bucket(bucket_name)
+
+    for s3_object in bucket.objects.all():
+        #with open(s3_object.key, 'wb'):
+            path, filename = os.path.split(s3_object.key)
+            bucket.download_file(s3_object.key, "/tmp/" + filename)
+
+def delete_files(bucket_name):
     """
     Func to delete files from bucket and bucket himself
+    No return
     """
     s3 = boto3.resource("s3")
+
     bucket = s3.Bucket(bucket_name)
     for key in bucket.objects.all():
         key.delete()
-    bucket.delete()
-
+    # Delete the bucket if we want to    
+    #bucket.delete()
 
 def bucket_exists(bucket_name):
     """
     Func to test if the bucket exist or not
+    Return True or False
     """
-
     s3 = boto3.client('s3')
+
     try:
         response = s3.head_bucket(Bucket=bucket_name)
+
     except botocore.exceptions.ClientError as e:
         logging.debug(e)
         return False
@@ -57,6 +81,7 @@ def bucket_exists(bucket_name):
 def create_temp_bucket_s3(bucket_name):
     """
     Func to create temporary s3 bucket to store data
+    Return bucket name
     """
     s3 = boto3.resource("s3")
 
@@ -77,8 +102,10 @@ def list_tgw_routetable():
     """
     client = boto3.client("ec2")
     tgw_table = list()
+
     try:
         tables = client.describe_transit_gateway_route_tables()
+
         for table in tables["TransitGatewayRouteTables"]:
             #tgw_table_name = (table["Tags"][2].get("Value"))
             tgw_table.append(table["TransitGatewayRouteTableId"])
@@ -92,6 +119,7 @@ def list_tgw_routetable():
 def export_data_to_s3(tgw_routetable_id, bucket):
     """
     Func to export the tgw route table to S3
+    No return
     """
     client = boto3.client("ec2")
     try:
@@ -100,7 +128,7 @@ def export_data_to_s3(tgw_routetable_id, bucket):
             S3Bucket=bucket
         )
     
-    except ClientError as error:
+    except botocore.exceptions.ClientError as error:
         print(error)
 
 
