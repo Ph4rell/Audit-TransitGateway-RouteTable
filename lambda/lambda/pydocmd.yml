@@ -1,0 +1,22 @@
+# Configuration file for pydocmd
+# Run "pydocmd generate" to generate updated documentation
+site_name: "Lambda TGW"
+
+generate:
+- lambda_tgw.md:
+  - lambda_tgw+
+
+pages:
+- Home: README.md << README.md
+#- Getting Started: getting_started.md << docs/getting_started.md
+#- Tutorial: tutorial.md << docs/tutorial.md
+#- Building Blocks: building_blocks.md
+#- Primitives: primitives.md
+#- Miscellaneous APIs: misc_api.md
+#- Citation: citation.md << docs/citation.md
+#- License: license << LICENSE
+
+headers: markdown
+
+gens_dir: docs
+site_dir: site
