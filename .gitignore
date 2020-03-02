@@ -7,3 +7,4 @@ venv/
 *.backup
 *__pycache__/
 *.zip
+lambda/docs/_build

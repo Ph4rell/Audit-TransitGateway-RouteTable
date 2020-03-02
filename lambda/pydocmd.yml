@@ -8,10 +8,9 @@ generate:
 
 pages:
 - Home: README.md << README.md
+- Lambda: lambda_tgw.md
 #- Getting Started: getting_started.md << docs/getting_started.md
 #- Tutorial: tutorial.md << docs/tutorial.md
-#- Building Blocks: building_blocks.md
-#- Primitives: primitives.md
 #- Miscellaneous APIs: misc_api.md
 #- Citation: citation.md << docs/citation.md
 #- License: license << LICENSE

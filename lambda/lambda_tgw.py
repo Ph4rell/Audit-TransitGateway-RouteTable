@@ -3,11 +3,11 @@ Script to export all the transit route table from a account to a S3 bucket
 and download all the file and extract the TGW attachment - VPC Id
 Outputs : TGW Attchments and VPC ID
 TODO
-function to download - function to extract
-add destination CIDR ?
+delete item from table before export
 '''
-#import json
+import json
 import logging
+import uuid
 #from random import randint
 import os
 import boto3
@@ -23,7 +23,6 @@ def lambda_handler(event, context):
 
     temp_bucket = "d2si-temp-bucket-s3"
 
-
     if bucket_exists(temp_bucket):
         print(f"Bucket {temp_bucket} exist !")
         # Delete the old files in the bucket
@@ -31,7 +30,9 @@ def lambda_handler(event, context):
 
         for rt in list_tgw_routetable():
             export_data_to_s3(rt, temp_bucket)
-        download_files_from_s3(temp_bucket)
+            export_data_in_dynamo(download_files_from_s3(temp_bucket), rt)
+        
+
     else:
         print(f"Bucket {temp_bucket} don't exist !")
         # Create the bucket
@@ -39,12 +40,42 @@ def lambda_handler(event, context):
 
         for rt in list_tgw_routetable():
             export_data_to_s3(rt, temp_bucket)
-        download_files_from_s3(temp_bucket)
+            export_data_in_dynamo(download_files_from_s3(temp_bucket), rt)
+
+
+def export_data_in_dynamo(filename, route_table):
+    """
+    Func to put data in dynamo table
+    :return no return
+    """
+    dynamodb = boto3.resource('dynamodb')
+    table = dynamodb.Table('TGW')
+
+    with open(f"/tmp/{filename}", 'r') as json_file:
+        data = json.load(json_file)
+        
+        for assoc in data["routes"]:
+
+            destCIDR = assoc.get("destinationCidrBlock")
+            attachID = assoc["transitGatewayAttachments"][0].get('transitGatewayAttachmentId')
+            vpc = assoc["transitGatewayAttachments"][0].get("resourceId")
+            
+            table.put_item(
+                Item={
+                    'Id': str(uuid.uuid4()),
+                    'RouteTable': route_table,
+                    'attachID': attachID,
+                    'vpc': vpc,
+                    'destCIDR': destCIDR,
+                    }
+                )
+        
+    
 
 def download_files_from_s3(bucket_name):
     """
     Func to download content of the bucket to /tmp/
-    :return: no return
+    :return: filename in s3
     """
     s3 = boto3.resource("s3")
 
@@ -59,6 +90,7 @@ def download_files_from_s3(bucket_name):
                 print(f"The object {s3_object.key} does not exist")
             else:
                 raise
+    return filename
 
 def delete_files(bucket_name):
     """
@@ -142,40 +174,6 @@ def export_data_to_s3(tgw_routetable_id, bucket):
         )
     except botocore.exceptions.ClientError as error:
         print(error)
-
-
-
-# try:
-#     files = list()
-#     bucket = s3.Bucket(bucket)
-
-#     for s3_object in bucket.objects.all():
-#         path, filename = os.path.split(s3_object.key)
-#         bucket.download_file(s3_object.key, filename)
-
-#         files.append(filename)
-    
-#     for file in files:
-#         print('')
-#         print(
-#             f"Name Route Table: {tgw_table_name}" \
-#             f"Route Table ID: {tgw_table}" \
-#             f"File: {file}"
-#         )
-        
-#         with open(file, 'r') as json_file:
-#             data = json.load(json_file)
-            
-#             for assoc in data["routes"]:
-#                 destCIDR = assoc.get("destinationCidrBlock")
-#                 attachId = assoc["transitGatewayAttachments"][0].get('transitGatewayAttachmentId')
-#                 vpc = assoc["transitGatewayAttachments"][0].get("resourceId")
-
-#                 print(f'CIDR Dest: {destCIDR} Attachment: {attachId} VPC: {vpc}')
-
-# except ClientError as error:
-#     for e in error.response["Error"]["Code"]:
-#         print(e)
 
 
 if __name__ == "__main__":

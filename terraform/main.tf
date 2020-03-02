@@ -53,7 +53,8 @@ resource "aws_iam_policy" "lambda_tgw_routetable" {
                 "s3:DeleteBucket",
                 "logs:CreateLogGroup",
                 "logs:CreateLogStream",
-                "logs:PutLogEvents"
+                "logs:PutLogEvents",
+                "dynamodb:PutItem"
             ],
         "Resource": "*"
         }
@@ -63,14 +64,14 @@ EOF
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_tgw_routetable" {
-  role              = "${aws_iam_role.role_for_lambda.name}"
-  policy_arn        = "${aws_iam_policy.lambda_tgw_routetable.arn}"
+  role              = aws_iam_role.role_for_lambda.name
+  policy_arn        = aws_iam_policy.lambda_tgw_routetable.arn
 }
 
 resource "aws_lambda_function" "lambda_tgw_routetable" {
   filename          = "../lambda_tgw_routetable.zip"
   function_name     = "Dev-TGWAutom-ListRouteTable"
-  role              = "${aws_iam_role.role_for_lambda.arn}"
+  role              = aws_iam_role.role_for_lambda.arn
   handler           = "lambda_tgw.lambda_handler"
   source_code_hash  = "$data.archive_file.lambda_log_parser-zip.output_base64sha256"
   runtime           = "python3.7"
@@ -86,6 +87,18 @@ resource "aws_cloudwatch_event_rule" "check_tgw_routetable" {
   schedule_expression = "cron(0 0 1 * ? *)"
 }
 
+resource "aws_dynamodb_table" "dynamodb-table" {
+  name           = "TGW"
+  billing_mode   = "PROVISIONED"
+  read_capacity  = 5
+  write_capacity = 5
+  hash_key       = "Id"
+
+  attribute {
+    name = "Id"
+    type = "S"
+  }
+}
 # resource "aws_cloudwatch_event_target" "lambda_target" {
 #   rule      = "${aws_cloudwatch_event_rule.watch_creds.name}"
 #   arn       = "${aws_lambda_alias.alias_dev.arn}"
